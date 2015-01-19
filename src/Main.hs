@@ -12,7 +12,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import           Data.Time.Calendar.OrdinalDate
 import           Lucid
-import           Snap.Core (Snap, route, dir, writeText, getRequest, rqPostParam, rqPostParams, redirect)
+import           Snap.Core hiding (path)
 import           Snap.Util.FileServe
 import           Snap.Http.Server
 
@@ -27,6 +27,7 @@ main = do
 
 site :: M.MVar [Feeling] -> Snap ()
 site feelingsM = do
+  modifyResponse (setContentType "text/html")
   dir "static" (serveDirectory ".") <|> route [("", home feelingsM), ("/feeling", feeling feelingsM)]
 
 lucid :: Html a -> Snap ()
