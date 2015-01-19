@@ -13,6 +13,7 @@ import qualified Data.Text.Lazy as TL
 import           Data.Time.Calendar.OrdinalDate
 import           Lucid
 import           Snap.Core hiding (path)
+import           Snap.Http.Server.Config
 import           Snap.Util.FileServe
 import           Snap.Http.Server
 
@@ -23,7 +24,9 @@ main = do
   feelings <- liftIO (M.newMVar [ Feeling "i like you"
                                 , Feeling "i don't like you"
                                 , Feeling "i like you more"])
-  quickHttpServe (site feelings)
+  httpServe config (site feelings)
+  where
+    config = setPort 4445 mempty
 
 site :: M.MVar [Feeling] -> Snap ()
 site feelingsM = do
