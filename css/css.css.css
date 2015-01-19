@@ -1,0 +1,11 @@
+@import url("reset.css");
+
+body {
+    margin: 2em 10%;
+    font-family: monospace;
+    line-height: 2;
+}
+
+p {
+    margin: 1em 0;
+}
