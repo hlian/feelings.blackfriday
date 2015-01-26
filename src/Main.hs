@@ -101,7 +101,7 @@ home feelingsM = do
       link_ [rel_ "stylesheet", href_ path]
 
     body' :: Int -> [Feeling] -> Html ()
-    body' day feelings = do
+    body' day feelings = body_ $ do
       h1_ "feelings.blackfriday"
       if day == 5 || cheating then good else bad
       h2_ "feelings"
