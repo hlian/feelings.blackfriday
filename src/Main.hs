@@ -45,8 +45,10 @@ main = do
     config = setPort 4445 mempty
 
 initialFeelingsM :: IO (M.MVar [Feeling])
-initialFeelingsM =
-  join $ (M.newMVar . fromJust . decode) <$> BSL.readFile "feelings.txt"
+initialFeelingsM = do
+  feelings <- (fromJust . decode) <$> BSL.readFile "feelings.txt"
+  length feelings `seq` return ()
+  M.newMVar feelings
 
 serialize :: MVar [Feeling] -> IO ()
 serialize feelingsM = do
