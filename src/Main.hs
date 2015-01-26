@@ -113,6 +113,7 @@ home feelingsM = do
 
     good = do
       p_ "it's friday"
+      p_ "feelings submitted on a non-friday will be gray-punished"
       with form_ [ action_ "/feeling"
                  , method_ "post"
                  ]

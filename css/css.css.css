@@ -20,6 +20,20 @@ textarea {
     padding: 1em;
 }
 
+form > p {
+    overflow: visible;
+}
+
 input {
     font-family: monospace;
+    overflow: visible;
+    margin: 3px;
+}
+
+input:focus {
+    box-shadow: 0 0 3px red;
+}
+
+.timeslip {
+    color: #999;
 }
