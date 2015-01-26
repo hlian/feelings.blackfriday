@@ -39,7 +39,6 @@ main :: IO ()
 main = do
   feelings <- initialFeelingsM
   D4.repeatedTimer (serialize feelings) (sDelay 1)
-
   httpServe config (site feelings)
   where
     config = setPort 4445 mempty
@@ -117,8 +116,8 @@ home feelingsM = do
       with form_ [ action_ "/feeling"
                  , method_ "post"
                  ]
-        (p_ (textarea_ [placeholder_ "type a feeling", name_ "text"] "") <>
-         p_ (input_ [type_ "submit"]))
+        (p_ (textarea_ [placeholder_ "type a feeling", name_ "text", tabindex_ "1"] "") <>
+         p_ (input_ [type_ "submit", tabindex_ "2"]))
     bad =
       p_ "come back when it's friday"
     cheating =
