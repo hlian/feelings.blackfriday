@@ -68,8 +68,8 @@ present = T.pack . show
 dayOfWeek :: UTCTime -> Int
 dayOfWeek = snd . sundayStartWeek . utctDay
 
-isFriday :: UTCTime -> Bool
-isFriday = (== 5) . dayOfWeek
+isTimeFriday :: UTCTime -> Bool
+isTimeFriday = (== 5) . dayOfWeek
 
 feeling :: MVar [Feeling] -> Snap ()
 feeling feelingsM = do
@@ -81,17 +81,17 @@ feeling feelingsM = do
 
 home :: MVar [Feeling] -> Snap ()
 home feelingsM = do
-  day <- dayOfWeek <$> liftIO getCurrentTime
-  toLucid <- liftIO $ M.modifyMVar feelingsM (htmlM day)
+  isFriday <- isTimeFriday <$> liftIO getCurrentTime
+  toLucid <- liftIO $ M.modifyMVar feelingsM (htmlM isFriday)
   lucid toLucid
   where
-    htmlM day feelings =
-      return (feelings, html' day feelings)
+    htmlM isFriday feelings =
+      return (feelings, html' isFriday feelings)
 
-    html' :: Int -> [Feeling] -> Html ()
-    html' day feelings = do
+    html' :: Bool -> [Feeling] -> Html ()
+    html' isFriday feelings = do
       doctype_
-      html_ (head' <> body' day feelings)
+      html_ (head' <> body' isFriday feelings)
 
     head' =
       head_ (title_ "feelings.blackfriday" <>
@@ -100,26 +100,23 @@ home feelingsM = do
     css path =
       link_ [rel_ "stylesheet", href_ path]
 
-    body' :: Int -> [Feeling] -> Html ()
-    body' day feelings = body_ $ do
+    body' :: Bool -> [Feeling] -> Html ()
+    body' isFriday feelings = body_ $ do
       h1_ "feelings.blackfriday"
-      if day == 5 || cheating then good else bad
+      good isFriday
       h2_ "feelings"
       forM_ feelings feeling'
 
     feeling' :: Feeling -> Html ()
     feeling' (Feeling t i) =
-      with p_ [class_ (if isFriday t then "friday" else "timeslip")] (toHtml i)
+      with p_ [class_ (if isTimeFriday t then "friday" else "timeslip")] (toHtml i)
 
-    good = do
-      p_ "it's friday"
+    good :: Bool -> Html ()
+    good isFriday = do
+      p_ (if isFriday then "it's friday" else "it's not friday")
       p_ "feelings submitted on a non-friday will be gray-punished"
       with form_ [ action_ "/feeling"
                  , method_ "post"
                  ]
         (p_ (textarea_ [placeholder_ "type a feeling", name_ "text", tabindex_ "1"] "") <>
          p_ (input_ [type_ "submit", tabindex_ "2"]))
-    bad =
-      p_ "come back when it's friday"
-    cheating =
-      True
