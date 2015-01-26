@@ -1,5 +1,9 @@
 @import url("reset.css");
 
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 2em 10%;
     font-family: monospace;
@@ -8,4 +12,14 @@ body {
 
 p {
     margin: 1em 0;
+}
+
+textarea {
+    width: 100%;
+    font-family: monospace;
+    padding: 1em;
+}
+
+input {
+    font-family: monospace;
 }
