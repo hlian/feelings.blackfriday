@@ -8,8 +8,9 @@ import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import           Data.Time.Clock (getCurrentTime, utctDay, UTCTime)
-import           Snap.Core hiding (path)
 import           Snap.Util.FileServe (serveDirectory)
+import           System.Directory (getCurrentDirectory)
+
 
 import qualified Control.Concurrent.MVar as M
 import qualified Control.Concurrent.Timer as D4
@@ -20,6 +21,7 @@ import qualified Data.Text.Lazy as TL
 import           BasePrelude
 import           Data.Aeson
 import           Lucid
+import           Snap.Core hiding (path)
 import           Snap.Http.Server.Config
 import           Snap.Http.Server
 
@@ -46,6 +48,7 @@ main = do
 initialFeelingsM :: IO (M.MVar [Feeling])
 initialFeelingsM = do
   feelings <- (fromJust . decode) <$> BSL.readFile "feelings.txt"
+  print <$> getCurrentDirectory
   length feelings `seq` return ()
   M.newMVar feelings
 
