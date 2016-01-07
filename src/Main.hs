@@ -16,17 +16,20 @@ import           System.Directory (getCurrentDirectory)
 
 import qualified Control.Concurrent.MVar as M
 import qualified Control.Concurrent.Timer as D4
-import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString as Bytes
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Time.Zones as TZ
 import qualified Data.Time.Zones.All as TZ
+import qualified System.Directory as System
+import qualified System.IO as System
+import qualified System.IO.Temp as System
 
-import           BasePrelude
+import           BasePrelude hiding (lazy)
+import           Control.Lens hiding ((.=))
 import           Data.Aeson
 import           Lucid
 import           Snap.Core hiding (path)
-import           Snap.Http.Server.Config
 import           Snap.Http.Server
 
 data Feeling = Feeling UTCTime Text deriving (Show, Eq)
@@ -51,7 +54,7 @@ main = do
 
 initialFeelingsM :: IO (M.MVar [Feeling])
 initialFeelingsM = do
-  feelings <- (fromJust . decode) <$> BSL.readFile "feelings.txt"
+  feelings <- (fromJust . decode . (^. lazy)) <$> Bytes.readFile "feelings.txt"
   getCurrentDirectory >>= print
   length feelings `seq` return ()
   M.newMVar feelings
@@ -59,7 +62,12 @@ initialFeelingsM = do
 serialize :: MVar [Feeling] -> IO ()
 serialize feelingsM = do
   feelings <- M.readMVar feelingsM
-  BSL.writeFile "feelings.txt" (encode feelings)
+  System.withTempFile "tmp" "feelings."
+    (\f h -> do
+      Bytes.hPutStr h (encode feelings ^. strict)
+      System.hFlush h
+      hClose h
+      System.renameFile f "feelings.txt")
 
 site :: M.MVar [Feeling] -> Snap ()
 site feelingsM = do

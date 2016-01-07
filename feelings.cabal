@@ -19,11 +19,13 @@ Executable feelings
                 , base-prelude
                 , bytestring
                 , directory
+                , lens
                 , lucid
                 , mtl
                 , snap-core
                 , snap-server
                 , suspend
+                , temporary
                 , text
                 , time
                 , timers
