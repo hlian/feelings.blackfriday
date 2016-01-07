@@ -6,8 +6,10 @@ import           Control.Concurrent.Suspend.Lifted (sDelay)
 import           Control.Monad.Trans (liftIO)
 import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
+import           Data.Time.Calendar (Day(..))
 import           Data.Time.Calendar.OrdinalDate (sundayStartWeek)
-import           Data.Time.Clock (getCurrentTime, utctDay, UTCTime)
+import           Data.Time.Clock (getCurrentTime, UTCTime)
+import           Data.Time.LocalTime (localDay)
 import           Snap.Util.FileServe (serveDirectory)
 import           System.Directory (getCurrentDirectory)
 
@@ -17,6 +19,8 @@ import qualified Control.Concurrent.Timer as D4
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Time.Zones as TZ
+import qualified Data.Time.Zones.All as TZ
 
 import           BasePrelude
 import           Data.Aeson
@@ -40,7 +44,7 @@ instance ToJSON Feeling where
 main :: IO ()
 main = do
   feelings <- initialFeelingsM
-  D4.repeatedTimer (serialize feelings) (sDelay 1)
+  _ <- D4.repeatedTimer (serialize feelings) (sDelay 1)
   httpServe config (site feelings)
   where
     config = setPort 4445 mempty
@@ -48,7 +52,7 @@ main = do
 initialFeelingsM :: IO (M.MVar [Feeling])
 initialFeelingsM = do
   feelings <- (fromJust . decode) <$> BSL.readFile "feelings.txt"
-  print <$> getCurrentDirectory
+  getCurrentDirectory >>= print
   length feelings `seq` return ()
   M.newMVar feelings
 
@@ -68,11 +72,11 @@ lucid = writeText . TL.toStrict . renderText
 present :: (Show a) => a -> Text
 present = T.pack . show
 
-dayOfWeek :: UTCTime -> Int
-dayOfWeek = snd . sundayStartWeek . utctDay
+dayOfWeek :: Day -> Int
+dayOfWeek = snd . sundayStartWeek
 
 isTimeFriday :: UTCTime -> Bool
-isTimeFriday = (== 5) . dayOfWeek
+isTimeFriday = (== 5) . dayOfWeek . localDay . TZ.utcToLocalTimeTZ (TZ.tzByLabel TZ.America__New_York)
 
 feeling :: MVar [Feeling] -> Snap ()
 feeling feelingsM = do
@@ -116,7 +120,7 @@ home feelingsM = do
 
     good :: Bool -> Html ()
     good isFriday = do
-      p_ (if isFriday then "it's friday" else "it's not friday")
+      p_ (if isFriday then "it's friday in nyc" else "it's not friday in nyc")
       p_ "feelings submitted on a non-friday will be gray-punished"
       with form_ [ action_ "/feeling"
                  , method_ "post"
