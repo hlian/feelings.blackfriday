@@ -1,31 +1,18 @@
-{-# LANGUAGE OverloadedStrings, NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Main where
-
-import           Control.Concurrent.Suspend.Lifted (sDelay)
-import           Control.Monad.Trans (liftIO)
-import           Data.Text (Text)
-import           Data.Text.Encoding (decodeUtf8)
-import           Data.Time.Calendar (Day(..))
-import           Data.Time.Calendar.OrdinalDate (sundayStartWeek)
-import           Data.Time.Clock (getCurrentTime, UTCTime)
-import           Data.Time.LocalTime (localDay)
-import           Snap.Util.FileServe (serveDirectory)
-import           System.Directory (getCurrentDirectory)
-
 
 import qualified Control.Concurrent.MVar as M
 import qualified Control.Concurrent.Timer as D4
 import qualified Data.ByteString as Bytes
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
 import qualified Data.Time.Zones as TZ
 import qualified Data.Time.Zones.All as TZ
 import qualified System.Directory as System
 import qualified System.IO as System
 import qualified System.IO.Temp as System
 
-import           BasePrelude hiding (lazy)
+import           Batteries
 import           Control.Lens hiding ((.=))
 import           Data.Aeson
 import           Lucid
@@ -41,8 +28,8 @@ instance FromJSON Feeling where
   parseJSON _ = error "FromJSON Feeling: expecting object"
 
 instance ToJSON Feeling where
-  toJSON (Feeling time text) =
-    object ["time" .= time, "text" .= text]
+  toJSON (Feeling time text_) =
+    object ["time" .= time, "text" .= text_]
 
 main :: IO ()
 main = do
@@ -54,7 +41,7 @@ main = do
 
 initialFeelingsM :: IO (M.MVar [Feeling])
 initialFeelingsM = do
-  feelings <- (fromJust . decode . (^. lazy)) <$> Bytes.readFile "feelings.txt"
+  feelings <- (fromJust . decode . view lazy) <$> Bytes.readFile "feelings.txt"
   getCurrentDirectory >>= print
   length feelings `seq` return ()
   M.newMVar feelings
@@ -75,10 +62,10 @@ site feelingsM = do
   dir "static" (serveDirectory ".") <|> route [("", home feelingsM), ("/feeling", feeling feelingsM)]
 
 lucid :: Html a -> Snap ()
-lucid = writeText . TL.toStrict . renderText
+lucid = writeText . view strict . renderText
 
 present :: (Show a) => a -> Text
-present = T.pack . show
+present = view packed . show
 
 dayOfWeek :: Day -> Int
 dayOfWeek = snd . sundayStartWeek
@@ -90,9 +77,14 @@ feeling :: MVar [Feeling] -> Snap ()
 feeling feelingsM = do
   req <- getRequest
   time <- liftIO getCurrentTime
-  let text = (decodeUtf8 . head . fromJust) (rqPostParam "text" req)
-  liftIO $ M.modifyMVar_ feelingsM (return . (:) (Feeling time text))
-  redirect "/"
+  let rawText = rqPostParam "text" req
+  case rawText  ^? (_Just . ix 0 . utf8) of
+    Just text_ -> do
+      liftIO $ M.modifyMVar_ feelingsM (return . (:) (Feeling time text_))
+      redirect "/"
+    Nothing -> do
+      let e = "bad ?text parameter: " <> present rawText
+      modifyResponse (setResponseStatus 400 (utf8 # e))
 
 home :: MVar [Feeling] -> Snap ()
 home feelingsM = do

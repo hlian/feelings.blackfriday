@@ -1,0 +1,42 @@
+name:
+  feelings
+version:
+  2.0.0
+synopsis:
+  https://feelings.blackfriday
+description:
+  the feelings friday social network
+license:
+  MIT
+github:
+  hlian/feelings.blackfriday
+category:
+  Web
+ghc-options: -Wall -Werror
+dependencies:
+  - aeson
+  - base
+  - base-prelude
+  - bytestring
+  - directory
+  - lens
+  - lucid
+  - mtl
+  - snap-core
+  - snap-server
+  - suspend
+  - temporary
+  - text
+  - time
+  - timers
+  - transformers
+  - tz
+default-extensions:
+  - NoImplicitPrelude
+  - OverloadedStrings
+executables:
+  feelings:
+    main:
+      Main.hs
+    source-dirs:
+      src

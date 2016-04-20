@@ -1,12 +1,5 @@
-resolver: lts-3.20
-compiler-check: newer-minor
+resolver: lts-5.13
 flags: {}
-packages:
-- '.'
-ghc-options:
-  '*': -threaded -Wall -funbox-strict-fields -O
 extra-deps:
-- tz-0.1.0.1
 - suspend-0.2.0.0
 - timers-0.2.0.3
-- tzdata-0.1.20150810.0

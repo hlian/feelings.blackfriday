@@ -1,32 +1,47 @@
-Name:                feelings
-Version:             1.0
-Synopsis:            https://feelings.blackfriday
-Description:         one-stop shop for the feelings friday social network
-License:             MIT
-Author:              Hao Lian
-Maintainer:          hi@haolian.org
-Stability:           Experimental
-Category:            Web
-Build-type:          Simple
-Cabal-version:       >=1.2
+-- This file has been generated from package.yaml by hpack version 0.9.0.
+--
+-- see: https://github.com/sol/hpack
 
-Executable feelings
-  hs-source-dirs: src
+name:           feelings
+version:        2.0.0
+synopsis:       https://feelings.blackfriday
+description:    the feelings friday social network
+category:       Web
+homepage:       https://github.com/hlian/feelings.blackfriday#readme
+bug-reports:    https://github.com/hlian/feelings.blackfriday/issues
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+source-repository head
+  type: git
+  location: https://github.com/hlian/feelings.blackfriday
+
+executable feelings
   main-is: Main.hs
-  Build-depends:  MonadCatchIO-transformers
-                , aeson
-                , base
-                , base-prelude
-                , bytestring
-                , directory
-                , lens
-                , lucid
-                , mtl
-                , snap-core
-                , snap-server
-                , suspend
-                , temporary
-                , text
-                , time
-                , timers
-                , tz
+  hs-source-dirs:
+      src
+  default-extensions: NoImplicitPrelude OverloadedStrings
+  ghc-options: -Wall -Werror
+  build-depends:
+      aeson
+    , base
+    , base-prelude
+    , bytestring
+    , directory
+    , lens
+    , lucid
+    , mtl
+    , snap-core
+    , snap-server
+    , suspend
+    , temporary
+    , text
+    , time
+    , timers
+    , transformers
+    , tz
+  other-modules:
+      Batteries
+  default-language: Haskell2010
