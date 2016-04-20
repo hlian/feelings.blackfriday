@@ -32,7 +32,9 @@ instance FromJSON Feeling where
   parseJSON (Object o) =
     Feeling <$> o .: "time"
             <*> o .: "text"
-            <*> o .: "via"
+            <*> (do
+                    via <- o .:? "via"
+                    return (fromMaybe ViaWeb via))
   parseJSON invalid =
     typeMismatch "FromJSON Feeling" invalid
 
