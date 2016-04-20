@@ -24,6 +24,7 @@ dependencies:
   - mtl
   - snap-core
   - snap-server
+  - stm
   - suspend
   - temporary
   - text

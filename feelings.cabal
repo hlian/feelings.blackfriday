@@ -35,6 +35,7 @@ executable feelings
     , mtl
     , snap-core
     , snap-server
+    , stm
     , suspend
     , temporary
     , text
@@ -43,5 +44,6 @@ executable feelings
     , transformers
     , tz
   other-modules:
-      Batteries
+      Feelings.Batteries
+      Feelings.Types
   default-language: Haskell2010

@@ -1,54 +1,47 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module Main where
 
-import qualified Control.Concurrent.MVar as M
-import qualified Control.Concurrent.Timer as D4
+import           Control.Concurrent.Timer (repeatedTimer)
 import qualified Data.ByteString as Bytes
-import qualified Data.Time.Zones as TZ
-import qualified Data.Time.Zones.All as TZ
 import qualified System.Directory as System
 import qualified System.IO as System
 import qualified System.IO.Temp as System
 
-import           Batteries
-import           Control.Lens hiding ((.=))
+import           Control.Concurrent.STM.TMVar
 import           Data.Aeson
+import           Feelings.Batteries
+import           Feelings.Types
 import           Lucid
 import           Snap.Core hiding (path)
 import           Snap.Http.Server
 
-data Feeling = Feeling UTCTime Text deriving (Show, Eq)
-
-instance FromJSON Feeling where
-  parseJSON (Object o) =
-    Feeling <$> o .: "time"
-            <*> o .: "text"
-  parseJSON _ = error "FromJSON Feeling: expecting object"
-
-instance ToJSON Feeling where
-  toJSON (Feeling time text_) =
-    object ["time" .= time, "text" .= text_]
-
 main :: IO ()
 main = do
   feelings <- initialFeelingsM
-  _ <- D4.repeatedTimer (serialize feelings) (sDelay 1)
+  _ <- repeatedTimer (serialize feelings) (sDelay 1)
   httpServe config (site feelings)
   where
     config = setPort 4445 mempty
 
-initialFeelingsM :: IO (M.MVar [Feeling])
+initialFeelingsM :: IO (TMVar [Feeling])
 initialFeelingsM = do
-  feelings <- (fromJust . decode . view lazy) <$> Bytes.readFile "feelings.txt"
+  bytes_ <- Bytes.readFile "feelings.txt"
+  feelings <-
+    case bytes_ ^. (lazy . to eitherDecode) of
+      Left _ ->
+        return []
+      Right alist ->
+        return alist
   getCurrentDirectory >>= print
   length feelings `seq` return ()
-  M.newMVar feelings
+  newTMVarIO feelings
 
-serialize :: MVar [Feeling] -> IO ()
+serialize :: TMVar [Feeling] -> IO ()
 serialize feelingsM = do
-  feelings <- M.readMVar feelingsM
+  feelings <- atomically (readTMVar feelingsM)
+  System.createDirectoryIfMissing True "tmp"
   System.withTempFile "tmp" "feelings."
     (\f h -> do
       Bytes.hPutStr h (encode feelings ^. strict)
@@ -56,45 +49,61 @@ serialize feelingsM = do
       hClose h
       System.renameFile f "feelings.txt")
 
-site :: M.MVar [Feeling] -> Snap ()
+site :: TMVar [Feeling] -> Snap ()
 site feelingsM = do
   modifyResponse (setContentType "text/html")
-  dir "static" (serveDirectory ".") <|> route [("", home feelingsM), ("/feeling", feeling feelingsM)]
+  dir "static" (serveDirectory ".") <|> route [
+    ("", home feelingsM)
+    , ("/feeling", feeling feelingsM)
+    , ("/sms", sms feelingsM)]
+
+sms :: TMVar [Feeling] -> Snap ()
+sms feelingsM = do
+  time <- liftIO getCurrentTime
+  inputs <- sequence (seek <$> ["Body", "From"])
+  case inputs of
+    [Just rawText, Just rawPhone] -> do
+      liftIO . atomically . void $ do
+        let afeeling = Feeling time rawText (ViaPhone (Phone rawPhone))
+        old <- readTMVar feelingsM
+        swapTMVar feelingsM (afeeling : old)
+      redirect "/"
+    _ -> do
+      let e = "bad (?Body, ?From) parameters: " <> present inputs
+      modifyResponse (setResponseStatus 400 (utf8 # e))
 
 lucid :: Html a -> Snap ()
 lucid = writeText . view strict . renderText
 
-present :: (Show a) => a -> Text
-present = view packed . show
+-- | How does this function not already exist
+seek :: MonadSnap m => Bytes.ByteString -> m (Maybe Text)
+seek key = do
+  req <- getRequest
+  let raw = rqPostParam key req
+  return (raw ^? _Just . ix 0 . utf8)
 
-dayOfWeek :: Day -> Int
-dayOfWeek = snd . sundayStartWeek
-
-isTimeFriday :: UTCTime -> Bool
-isTimeFriday = (== 5) . dayOfWeek . localDay . TZ.utcToLocalTimeTZ (TZ.tzByLabel TZ.America__New_York)
-
-feeling :: MVar [Feeling] -> Snap ()
+feeling :: TMVar [Feeling] -> Snap ()
 feeling feelingsM = do
   req <- getRequest
   time <- liftIO getCurrentTime
   let rawText = rqPostParam "text" req
-  case rawText  ^? (_Just . ix 0 . utf8) of
+  case rawText ^? (_Just . ix 0 . utf8) of
     Just text_ -> do
-      liftIO $ M.modifyMVar_ feelingsM (return . (:) (Feeling time text_))
+      liftIO . atomically . void $ do
+        let afeeling = Feeling time text_ ViaWeb
+        old <- readTMVar feelingsM
+        swapTMVar feelingsM (afeeling : old)
       redirect "/"
     Nothing -> do
       let e = "bad ?text parameter: " <> present rawText
       modifyResponse (setResponseStatus 400 (utf8 # e))
 
-home :: MVar [Feeling] -> Snap ()
+home :: TMVar [Feeling] -> Snap ()
 home feelingsM = do
   isFriday <- isTimeFriday <$> liftIO getCurrentTime
-  toLucid <- liftIO $ M.modifyMVar feelingsM (htmlM isFriday)
-  lucid toLucid
+  feelings <- liftIO . atomically $ readTMVar feelingsM
+  lucid (html' isFriday feelings)
   where
-    htmlM isFriday feelings =
-      return (feelings, html' isFriday feelings)
-
     html' :: Bool -> [Feeling] -> Html ()
     html' isFriday feelings = do
       doctype_
@@ -115,13 +124,16 @@ home feelingsM = do
       forM_ feelings feeling'
 
     feeling' :: Feeling -> Html ()
-    feeling' (Feeling t i) =
+    feeling' (Feeling t i _) =
       with p_ [class_ (if isTimeFriday t then "friday" else "timeslip")] (toHtml i)
 
     good :: Bool -> Html ()
     good isFriday = do
       p_ (if isFriday then "it's friday in nyc" else "it's not friday in nyc")
       p_ "feelings submitted on a non-friday will be gray-punished"
+      p_ ("you can also text your feelings to " <>
+          a_ [href_ "tel://1631400FEEL"] "+1631400FEEL"
+         )
       with form_ [ action_ "/feeling"
                  , method_ "post"
                  ]
