@@ -37,3 +37,7 @@ input:focus {
 .timeslip {
     color: #999;
 }
+
+.phone:before {
+    content: "💬 ";
+}

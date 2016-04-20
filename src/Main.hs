@@ -5,6 +5,7 @@ module Main where
 
 import           Control.Concurrent.Timer (repeatedTimer)
 import qualified Data.ByteString as Bytes
+import qualified Data.Text as Text
 import qualified System.Directory as System
 import qualified System.IO as System
 import qualified System.IO.Temp as System
@@ -124,8 +125,11 @@ home feelingsM = do
       forM_ feelings feeling'
 
     feeling' :: Feeling -> Html ()
-    feeling' (Feeling t i _) =
-      with p_ [class_ (if isTimeFriday t then "friday" else "timeslip")] (toHtml i)
+    feeling' (Feeling t i via) = do
+      let classes = [ if isTimeFriday t then "friday" else "timeslip"
+                    , case via of ViaPhone _ -> "phone"; _ -> ""
+                    ]
+      with p_ [class_ . comma $ classes] (toHtml i)
 
     good :: Bool -> Html ()
     good isFriday = do
@@ -139,3 +143,7 @@ home feelingsM = do
                  ]
         (p_ (textarea_ [placeholder_ "type a feeling", name_ "text", tabindex_ "1"] "") <>
          p_ (input_ [type_ "submit", tabindex_ "2"]))
+
+comma :: [Text] -> Text
+comma =
+  Text.intercalate " " . filter (not . Text.null)
