@@ -1,4 +1,4 @@
-resolver: lts-5.13
+resolver: lts-6.3
 flags: {}
 extra-deps:
 - suspend-0.2.0.0
