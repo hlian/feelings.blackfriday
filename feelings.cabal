@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.9.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -22,7 +22,7 @@ executable feelings
   main-is: Main.hs
   hs-source-dirs:
       src
-  default-extensions: NoImplicitPrelude OverloadedStrings
+  default-extensions: NoImplicitPrelude OverloadedStrings FlexibleContexts ViewPatterns
   ghc-options: -Wall -Werror
   build-depends:
       aeson
@@ -43,6 +43,8 @@ executable feelings
     , timers
     , transformers
     , tz
+    , unix
+    , wreq
   other-modules:
       Feelings.Batteries
       Feelings.Types

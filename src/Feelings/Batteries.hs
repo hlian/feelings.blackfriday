@@ -1,7 +1,12 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Feelings.Batteries
        ( sDelay
+       , module BasePrelude
+       , module Control.Lens
+       , module Data.Text.Strict.Lens
+       , serveDirectory
        , Day(..)
        , Text
        , UTCTime
@@ -9,14 +14,11 @@ module Feelings.Batteries
        , getCurrentTime
        , liftIO
        , localDay
-       , module BasePrelude
-       , module Control.Lens
-       , module Data.Text.Strict.Lens
-       , serveDirectory
        , sundayStartWeek
        , present
        , dayOfWeek
        , isTimeFriday
+       , paewe
        )where
 
 import           Control.Concurrent.Suspend.Lifted (sDelay)
@@ -34,6 +36,7 @@ import           System.Directory (getCurrentDirectory)
 import           BasePrelude hiding (lazy, (&), uncons, index)
 import           Control.Lens hiding ((.=))
 import           Data.Text.Strict.Lens
+import           Network.Wreq
 
 present :: (Show a) => a -> Text
 present = view packed . show
@@ -47,3 +50,8 @@ isTimeFriday =
     . dayOfWeek
     . localDay
     . TZ.utcToLocalTimeTZ (TZ.tzByLabel TZ.America__New_York)
+
+
+paewe :: Text -> Traversal' Options Text
+paewe k =
+  param k . _head

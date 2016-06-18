@@ -9,14 +9,27 @@ import qualified Data.Text as Text
 import qualified System.Directory as System
 import qualified System.IO as System
 import qualified System.IO.Temp as System
+import qualified System.Posix.Env.ByteString as System
 
 import           Control.Concurrent.STM.TMVar
 import           Data.Aeson
 import           Feelings.Batteries
 import           Feelings.Types
 import           Lucid
+import           Network.Wreq hiding (head_)
 import           Snap.Core hiding (path)
 import           Snap.Http.Server
+
+testMain = do
+  Just sid <- System.getEnv "FEELINGS_SID"
+  Just auth <- System.getEnv "FEELINGS_AUTH"
+  let sidString = view (utf8 . unpacked) sid
+  r <- postWith (optsOf sid auth) ("https://api.twilio.com/2010-04-01/Accounts/" <> sidString <> "/Messages")
+                ["To" := ("+19197493573" :: String), "From" := ("+16314003335" :: String), "Body" := ("hi hao" :: String)]
+  return r
+  where
+    optsOf user pass =
+      defaults & auth ?~ basicAuth user pass
 
 main :: IO ()
 main = do
@@ -28,6 +41,19 @@ main = do
 
 initialFeelingsM :: IO (TMVar [Feeling])
 initialFeelingsM = do
+  bytes_ <- Bytes.readFile "feelings.txt"
+  feelings <-
+    case bytes_ ^. (lazy . to eitherDecode) of
+      Left _ ->
+        return []
+      Right alist ->
+        return alist
+  getCurrentDirectory >>= print
+  length feelings `seq` return ()
+  newTMVarIO feelings
+
+initialLurkers :: [Feeling] -> IO (TMVar [Feeling])
+initialLurkers feelings = do
   bytes_ <- Bytes.readFile "feelings.txt"
   feelings <-
     case bytes_ ^. (lazy . to eitherDecode) of
@@ -55,7 +81,7 @@ site feelingsM = do
   modifyResponse (setContentType "text/html")
   dir "static" (serveDirectory ".") <|> route [
     ("", home feelingsM)
-    , ("/feeling", feeling feelingsM)
+    , ("/feeling", makeFeeling feelingsM)
     , ("/sms", sms feelingsM)]
 
 sms :: TMVar [Feeling] -> Snap ()
@@ -83,8 +109,8 @@ seek key = do
   let raw = rqPostParam key req
   return (raw ^? _Just . ix 0 . utf8)
 
-feeling :: TMVar [Feeling] -> Snap ()
-feeling feelingsM = do
+makeFeeling :: TMVar [Feeling] -> Snap ()
+makeFeeling feelingsM = do
   req <- getRequest
   time <- liftIO getCurrentTime
   let rawText = rqPostParam "text" req

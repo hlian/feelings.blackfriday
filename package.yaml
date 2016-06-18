@@ -32,9 +32,13 @@ dependencies:
   - timers
   - transformers
   - tz
+  - unix
+  - wreq
 default-extensions:
   - NoImplicitPrelude
   - OverloadedStrings
+  - FlexibleContexts
+  - ViewPatterns
 executables:
   feelings:
     main:
