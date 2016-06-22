@@ -40,4 +40,7 @@ input:focus {
 
 .phone:before {
     content: "💬 ";
+    display: block;
+    float: left;
+    margin-right: 1em;
 }
