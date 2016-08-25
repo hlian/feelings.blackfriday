@@ -138,7 +138,7 @@ home feelingsM = do
       p_ (if isFriday then "it's friday in nyc" else "it's not friday in nyc")
       p_ "feelings submitted on a non-friday will be gray-punished"
       p_ (mconcat [ "fun facts"
-                  , " // html is dumb sms is cool and hip and smart " <> a_ [href_ "tel://1631400FEEL"] "+1631400FEEL"
+                  , " :: html is dumb sms is cool and hip and smart " <> a_ [href_ "tel://1631400FEEL"] "+1631400FEEL"
                   , " // hyper-draw feeling to make feeling big and color " <> a_ [href_ "https://sky-carver.hyperdev.space"] (i_ "Frog Feels")
                   ]
          )
