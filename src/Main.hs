@@ -61,17 +61,19 @@ site feelingsM = do
 sms :: TMVar [Feeling] -> Snap ()
 sms feelingsM = do
   time <- liftIO getCurrentTime
-  inputs <- sequence (seek <$> ["Body", "From"])
+  inputs <- sequence (seek <$> ["Body", "From", "To"])
   case inputs of
-    [Just rawText, Just rawPhone] -> do
+    [Just rawText, Just rawFrom, Just rawTo] -> do
       liftIO . atomically . void $ do
-        let afeeling = Feeling time rawText (ViaPhone (Phone rawPhone))
+        let afeeling = Feeling time rawText (ViaPhone (Phone rawFrom))
         old <- readTMVar feelingsM
         swapTMVar feelingsM (afeeling : old)
-      redirect "/"
+      writeText (appEndo (fill "?from" rawTo <> fill "?to" rawFrom) "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Sms from=\"?from\" to=\"?to\">thank you my child</Sms></Response>")
     _ -> do
       let e = "bad (?Body, ?From) parameters: " <> present inputs
       modifyResponse (setResponseStatus 400 (utf8 # e))
+  where
+    fill k v = Endo (Text.replace k v)
 
 lucid :: Html a -> Snap ()
 lucid = writeText . view strict . renderText
