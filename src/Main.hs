@@ -85,21 +85,32 @@ seek key = do
   let raw = rqPostParam key req
   return (raw ^? _Just . ix 0 . utf8)
 
+data Classified a = Good a | Spam | Missing
+
+reallyGoodSpamFilter :: Maybe Text -> Classified Text
+reallyGoodSpamFilter (Just t)
+  | Text.isInfixOf "\r\n" t = Spam
+  | otherwise               = Good t
+reallyGoodSpamFilter Nothing = Missing
+
 feeling :: TMVar [Feeling] -> Snap ()
 feeling feelingsM = do
   req <- getRequest
   time <- liftIO getCurrentTime
   let rawText = rqPostParam "text" req
-  case rawText ^? (_Just . ix 0 . utf8) of
-    Just text_ -> do
+  case rawText ^? (_Just . ix 0 . utf8) & reallyGoodSpamFilter of
+    Good text_ -> do
       liftIO . atomically . void $ do
         let afeeling = Feeling time text_ ViaWeb
         old <- readTMVar feelingsM
         swapTMVar feelingsM (afeeling : old)
       redirect "/"
-    Nothing -> do
+    Missing -> do
       let e = "bad ?text parameter: " <> present rawText
       modifyResponse (setResponseStatus 400 (utf8 # e))
+    Spam -> do
+      let e = "bad ?text parametre: " <> present rawText
+      modifyResponse (setResponseStatus 200 (utf8 # e))
 
 home :: TMVar [Feeling] -> Snap ()
 home feelingsM = do

@@ -1,4 +1,4 @@
-resolver: lts-6.23
+resolver: nightly-2017-12-01
 flags: {}
 extra-deps:
 - suspend-0.2.0.0
