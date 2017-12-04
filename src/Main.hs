@@ -89,8 +89,9 @@ data Classified a = Good a | Spam | Missing
 
 reallyGoodSpamFilter :: Maybe Text -> Classified Text
 reallyGoodSpamFilter (Just t)
-  | Text.isInfixOf "\r\n" t = Spam
-  | otherwise               = Good t
+  | Text.isInfixOf "\r\n" t  = Spam
+  | Text.isInfixOf "[url=" t = Spam
+  | otherwise                = Good t
 reallyGoodSpamFilter Nothing = Missing
 
 feeling :: TMVar [Feeling] -> Snap ()
